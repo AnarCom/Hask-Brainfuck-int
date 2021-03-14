@@ -10,7 +10,7 @@ where
   -- [	while(arr[i]){	если значение текущей ячейки ноль, перейти вперёд по тексту программы на ячейку, следующую за соответствующей ] (с учётом вложенности)
   -- ]	}	если значение текущей ячейки не нуль, перейти назад по тексту программы на символ [ (с учётом вложенности)
   --
-
+  import Data.Char (ord, chr)
   -- Прости господи, список инструкций
   -- В названиях могла быть ваша реклама
   data Instruction = Forward
@@ -46,11 +46,26 @@ where
   inc :: Memory -> Memory
   inc m = modifyMemory (+1) m
 
-  decr :: Memory -> Memory
-  decr m = modifyMemory (+(-1)) m
+  dec :: Memory -> Memory
+  dec m = modifyMemory (+(-1)) m
 
   writeToMemory :: Memory -> Int -> Memory
   writeToMemory (Memory left (x:xs)) num = Memory left (num:xs)
 
   readFromMemory :: Memory -> Int
   readFromMemory (Memory _ (x:_)) = x
+
+  run_parsed :: [Instruction] -> IO Memory
+  run_parsed instructions = exec emptyMemory instructions
+    where
+      exec m [] = return m
+      exec m (x:xs) = case x of
+        Forward -> exec (goForward m) xs
+        Backward -> exec (goBackward m) xs
+        Increment -> exec (inc m) xs
+        Decrement -> exec (dec m) xs
+        Input -> do
+          c <- getChar
+          exec (writeToMemory m (ord c)) xs
+          return m
+        
