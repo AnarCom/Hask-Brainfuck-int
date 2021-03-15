@@ -50,11 +50,10 @@ where
   dec m = modifyMemory (+(-1)) m
 
   writeToMemory :: Memory -> Int -> Memory
-  writeToMemory (Memory left (x:xs)) num = Memory left (num:xs)
+  writeToMemory m num = modifyMemory (const num) m
 
-  readFromMemory :: Memory -> Int
-  readFromMemory (Memory _ (x:_)) = x
-
+ -- для исполнение кода, который был распарсен используется парадигма
+ -- state-машины
   run_parsed :: [Instruction] -> IO Memory
   run_parsed instructions = exec emptyMemory instructions
     where
@@ -67,5 +66,14 @@ where
         Input -> do
           c <- getChar
           exec (writeToMemory m (ord c)) xs
-          return m
-        
+        Output -> do
+          putChar (chr (readMemory m))
+          exec (m) xs
+        Loop body -> if (readMemory m) /= 0
+                     then do
+                       m' <- exec m body
+                       exec m' (x:xs)
+                     else exec m xs
+
+  parser :: [Char]
+  parser = "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>."
