@@ -1,5 +1,12 @@
 module BrainFuck
 where
+  import Data.Char (ord, chr)
+  import qualified Text.Megaparsec as P
+  import qualified Text.Megaparsec.Char as P'
+  import Data.Text (Text)
+  import Data.Void
+  import System.IO
+  import Control.Monad
   -- Список команд :(
   -- >	i++;	перейти к следующей ячейке
   -- <	i--;	перейти к предыдущей ячейке
@@ -10,18 +17,54 @@ where
   -- [	while(arr[i]){	если значение текущей ячейки ноль, перейти вперёд по тексту программы на ячейку, следующую за соответствующей ] (с учётом вложенности)
   -- ]	}	если значение текущей ячейки не нуль, перейти назад по тексту программы на символ [ (с учётом вложенности)
   --
-  import Data.Char (ord, chr)
   -- Прости господи, список инструкций
   -- В названиях могла быть ваша реклама
   data Instruction = Forward
+                   -- | Forward_opt (Int)
                    | Backward
+                   -- | Backward_opt (Int)
                    | Increment
+                   -- | Increment_opt (Int)
                    | Decrement
+                   -- | Decrement_opt (Int)
                    | Output
                    | Input
                    | Loop [Instruction]
-                   deriving (Show)
+                   deriving (Show, Eq)
 
+
+  -- !Parser
+  type Parser = P.Parsec Void String
+
+  parseBf :: Parser Instruction
+  parseBf = P.choice
+                  [ Increment <$ P'.char '+'
+                  , Decrement <$ P'.char '-'
+                  , Backward <$ P'.char '<'
+                  , Forward <$ P'.char '>'
+                  , Output <$ P'.char '.'
+                  , Input <$ P'.char ','
+                  , Loop <$> (P'.char '[' *> P.many parseBf <* P'.char ']')
+                  ]
+
+  data Program = Program [Instruction] deriving (Show)
+
+  parseProgram :: Parser Program
+  parseProgram = Program <$> P.many parseBf
+
+  bfPreprocessor :: [Char] -> [Char]
+  bfPreprocessor str = filter (\a -> a `elem` "><.,[]+-") str
+
+  evalProgram :: String -> IO ()
+  evalProgram s = case P.parse parseProgram "" (bfPreprocessor s) of
+    Left e -> do
+      print "error"
+      print e
+    Right prog -> do
+      mem <- run_parsed prog
+      print mem
+
+  -- !Interpretator
   data Memory = Memory [Int] [Int] deriving (Show)
 
   emptyMemory :: Memory
@@ -54,8 +97,8 @@ where
 
  -- для исполнение кода, который был распарсен используется парадигма
  -- state-машины
-  run_parsed :: [Instruction] -> IO Memory
-  run_parsed instructions = exec emptyMemory instructions
+  run_parsed :: Program -> IO Memory
+  run_parsed (Program instructions) = exec emptyMemory instructions
     where
       exec m [] = return m
       exec m (x:xs) = case x of
@@ -75,5 +118,18 @@ where
                        exec m' (x:xs)
                      else exec m xs
 
+  readAndExecBf :: [Char] -> IO ()
+  readAndExecBf path = do
+    contents <- readFile path
+    evalProgram contents
+
+
+
   helloWorldProgram :: [Char]
-  helloWorldProgram = "++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>."
+  helloWorldProgram = "++++[>+++++<-]>[<+++++>-]+<+[>[>+>+<<-]++>>[<<+>>-]>>>[-]++>[-]+>>>+[[-]++++++>>>]<<<[[<++++++++<++>>-]+<.<[>----<-]<]<<[>>>>>[>>>[-]+++++++++<[>-<-]+++++++++>[-[<->-]+[<<<]]<[>+<-]>]<<-]<<-]"
+
+  c :: [Char]
+  c = ",[.-]"
+
+  constantPath :: [Char]
+  constantPath = "C:\\Users\\AnarCom\\Desktop\\BrainFuck\\squares.bf"
