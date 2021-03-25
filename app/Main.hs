@@ -23,7 +23,7 @@ getPath ((Args lang _), arr) = if length arr /= 1
 execLang (Args lang path) = if lang == "bf"
   then P.readAndExecBf path
   else P.readAndExecOok path
--- "C:\\Users\\AnarCom\\Desktop\\BrainFuck\\helloWorld.ook"
+
 main :: IO ()
 main = do
           a <- getArgs
