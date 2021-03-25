@@ -62,8 +62,13 @@ where
       print e
     Right prog -> do
       mem <- run_parsed prog
+      putStrLn ""
       print mem
 
+  readAndExecBf :: [Char] -> IO ()
+  readAndExecBf path = do
+    contents <- readFile path
+    evalProgram contents
   -- !Interpretator
   data Memory = Memory [Int] [Int] deriving (Show)
 
@@ -118,18 +123,36 @@ where
                        exec m' (x:xs)
                      else exec m xs
 
-  readAndExecBf :: [Char] -> IO ()
-  readAndExecBf path = do
-    contents <- readFile path
-    evalProgram contents
 
+  -- + -> Ook. Ook.
+  -- - -> Ook! Ook!
+  -- > -> Ook. Ook?
+  -- < -> Ook? Ook.
+  -- [ -> Ook! Ook?
+  -- ] -> Ook? Ook!
+  -- . -> Ook! Ook.
+  -- , -> Ook. Ook!
 
+  ookToBf str = do
+    return (fil str)
+    where
+      fil [] = []
+      fil (x:y:xs)
+       | (x == '.') && (y == '.') = '+' : (fil xs)
+       | (x == '!') && (y == '!') = '-' : (fil xs)
+       | (x == '.') && (y == '?') = '>' : (fil xs)
+       | (x == '?') && (y == '.') = '<' : (fil xs)
+       | (x == '!') && (y == '?') = '[' : (fil xs)
+       | (x == '?') && (y == '!') = ']' : (fil xs)
+       | (x == '!') && (y == '.') = '.' : (fil xs)
+       | (x == '.') && (y == '!') = ',' : (fil xs)
+       | otherwise = error "Sonething strange with ook"
 
-  helloWorldProgram :: [Char]
-  helloWorldProgram = "++++[>+++++<-]>[<+++++>-]+<+[>[>+>+<<-]++>>[<<+>>-]>>>[-]++>[-]+>>>+[[-]++++++>>>]<<<[[<++++++++<++>>-]+<.<[>----<-]<]<<[>>>>>[>>>[-]+++++++++<[>-<-]+++++++++>[-[<->-]+[<<<]]<[>+<-]>]<<-]<<-]"
+  ookPreprocessor str = do
+    return (filter (\a -> a `elem` ".!?") str)
 
-  c :: [Char]
-  c = ",[.-]"
-
-  constantPath :: [Char]
-  constantPath = "C:\\Users\\AnarCom\\Desktop\\BrainFuck\\squares.bf"
+  readAndExecOok path = do
+    content <- readFile path
+    ookRaw <- ookPreprocessor content
+    bfCode <- ookToBf ookRaw
+    evalProgram bfCode
